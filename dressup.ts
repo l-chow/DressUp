@@ -9,6 +9,7 @@ let baseFigure: HTMLImageElement;
 let isDragging = false;
 let imageIntersect: DraggableImage;
 let intersectType: string;
+let pointerAreas: CursorArea[];
 
 const HEAD_TYPE = "HEAD";
 const BODY_TYPE = "BODY";
@@ -27,6 +28,13 @@ type DraggableImage = {
   y: number;
   width: number;
   height: number;
+};
+
+type CursorArea = {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
 };
 
 window.onload = () => {
@@ -63,14 +71,8 @@ window.onload = () => {
     };
 
     hatImages.push(hatImage);
-    // make hats draggable
-    hatImage.image.onmousedown = (e: MouseEvent) => {
-      hatImage.x = e.clientX;
-      hatImage.y = e.clientY;
-      animate();
-    };
 
-    hatImage.image.onmouseup = (e: MouseEvent) => {};
+    pointerAreas = designateCursorArea();
   }
 
   canvas.onmousedown = (e: MouseEvent) => {
@@ -95,17 +97,21 @@ window.onload = () => {
 
   canvas.onmousemove = (e: MouseEvent) => {
     let rect = canvas.getBoundingClientRect();
+
+    // change cursor to pointer if mouse over draggableimage
+    changeCursor(e.clientX - rect.left, e.clientY - rect.top);
+
     if (isDragging) {
-      console.log(imageIntersect);
       imageIntersect.x += e.movementX;
       imageIntersect.y += e.movementY;
+      pointerAreas = designateCursorArea();
     }
   };
 
   canvas.onmouseup = (e: MouseEvent) => {
     let rect = canvas.getBoundingClientRect();
     if (isDragging) {
-      snapItemToBody(
+      snapItemToFigure(
         imageIntersect,
         e.clientX - rect.left,
         e.clientY - rect.top,
@@ -114,6 +120,8 @@ window.onload = () => {
     }
     isDragging = false;
     imageIntersect = null;
+    pointerAreas = designateCursorArea();
+    changeCursor(e.clientX - rect.left, e.clientY - rect.top);
   };
 
   animate();
@@ -150,7 +158,7 @@ const testImageIntersect = (
   return false;
 };
 
-const snapItemToBody = (
+const snapItemToFigure = (
   elem: DraggableImage,
   x: number,
   y: number,
@@ -180,4 +188,42 @@ const snapItemToBody = (
       elem.y = HAT_COLUMN_Y + elem.height * hatImages.indexOf(elem);
     }
   }
+};
+
+const designateCursorArea = (): CursorArea[] => {
+  let areas: CursorArea[] = [];
+
+  // any clothing should have the cursor change to pointer
+  for (let i = 0; i < hatImages.length; i++) {
+    let hatImage = hatImages[i];
+    let area: CursorArea = {
+      startX: hatImage.x,
+      startY: hatImage.y,
+      endX: hatImage.x + hatImage.width,
+      endY: hatImage.y + hatImage.height,
+    };
+    areas.push(area);
+  }
+
+  return areas;
+};
+
+const changeCursor = (x: number, y: number) => {
+  // check if current cursor location is within pointer area
+  // if true set to pointer else set to default (auto)
+  let intersect = false;
+  for (let i = 0; i < pointerAreas.length; i++) {
+    let pointerArea = pointerAreas[i];
+    if (
+      x >= pointerArea.startX &&
+      x <= pointerArea.endX &&
+      y >= pointerArea.startY &&
+      y <= pointerArea.endY
+    ) {
+      intersect = true;
+      break;
+    }
+  }
+  if (intersect) canvas.style.cursor = "pointer";
+  else canvas.style.cursor = "auto";
 };

@@ -8,6 +8,7 @@ var baseFigure;
 var isDragging = false;
 var imageIntersect;
 var intersectType;
+var pointerAreas;
 var HEAD_TYPE = "HEAD";
 var BODY_TYPE = "BODY";
 var HEAD_DATA = {
@@ -31,7 +32,7 @@ window.onload = function () {
     // TODO: draw hats
     // TODO: draw outfits
     var hatArray = ["hat_orange.png", "hat_green.png", "hat_propeller.png"];
-    var _loop_1 = function (i) {
+    for (var i = 0; i < hatArray.length; i++) {
         var image = new Image();
         image.setAttribute("id", "hat" + i);
         // hatImage.addEventListener("load", () => {
@@ -46,16 +47,7 @@ window.onload = function () {
             height: image.height,
         };
         hatImages.push(hatImage);
-        // make hats draggable
-        hatImage.image.onmousedown = function (e) {
-            hatImage.x = e.clientX;
-            hatImage.y = e.clientY;
-            animate();
-        };
-        hatImage.image.onmouseup = function (e) { };
-    };
-    for (var i = 0; i < hatArray.length; i++) {
-        _loop_1(i);
+        pointerAreas = designateCursorArea();
     }
     canvas.onmousedown = function (e) {
         var rect = canvas.getBoundingClientRect();
@@ -72,19 +64,23 @@ window.onload = function () {
     };
     canvas.onmousemove = function (e) {
         var rect = canvas.getBoundingClientRect();
+        // change cursor to pointer if mouse over draggableimage
+        changeCursor(e.clientX - rect.left, e.clientY - rect.top);
         if (isDragging) {
-            console.log(imageIntersect);
             imageIntersect.x += e.movementX;
             imageIntersect.y += e.movementY;
+            pointerAreas = designateCursorArea();
         }
     };
     canvas.onmouseup = function (e) {
         var rect = canvas.getBoundingClientRect();
         if (isDragging) {
-            snapItemToBody(imageIntersect, e.clientX - rect.left, e.clientY - rect.top, intersectType);
+            snapItemToFigure(imageIntersect, e.clientX - rect.left, e.clientY - rect.top, intersectType);
         }
         isDragging = false;
         imageIntersect = null;
+        pointerAreas = designateCursorArea();
+        changeCursor(e.clientX - rect.left, e.clientY - rect.top);
     };
     animate();
 };
@@ -110,7 +106,7 @@ var testImageIntersect = function (elem, x, y) {
     }
     return false;
 };
-var snapItemToBody = function (elem, x, y, itemType) {
+var snapItemToFigure = function (elem, x, y, itemType) {
     if (itemType == HEAD_TYPE) {
         // coordinates of head is fixed on canvas
         if (x >= HEAD_DATA.x &&
@@ -133,4 +129,38 @@ var snapItemToBody = function (elem, x, y, itemType) {
             elem.y = HAT_COLUMN_Y + elem.height * hatImages.indexOf(elem);
         }
     }
+};
+var designateCursorArea = function () {
+    var areas = [];
+    // any clothing should have the cursor change to pointer
+    for (var i = 0; i < hatImages.length; i++) {
+        var hatImage = hatImages[i];
+        var area = {
+            startX: hatImage.x,
+            startY: hatImage.y,
+            endX: hatImage.x + hatImage.width,
+            endY: hatImage.y + hatImage.height,
+        };
+        areas.push(area);
+    }
+    return areas;
+};
+var changeCursor = function (x, y) {
+    // check if current cursor location is within pointer area
+    // if true set to pointer else set to default (auto)
+    var intersect = false;
+    for (var i = 0; i < pointerAreas.length; i++) {
+        var pointerArea = pointerAreas[i];
+        if (x >= pointerArea.startX &&
+            x <= pointerArea.endX &&
+            y >= pointerArea.startY &&
+            y <= pointerArea.endY) {
+            intersect = true;
+            break;
+        }
+    }
+    if (intersect)
+        canvas.style.cursor = "pointer";
+    else
+        canvas.style.cursor = "auto";
 };
