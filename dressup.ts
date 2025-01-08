@@ -1,6 +1,6 @@
 // declare canvas/board related variables
 let canvasWidth = 600;
-let canvasHeight = 600;
+let canvasHeight = 500;
 let hatImages: DraggableImage[] = [];
 let context: CanvasRenderingContext2D;
 let canvas: HTMLCanvasElement;
@@ -8,6 +8,18 @@ let baseFigure: HTMLImageElement;
 
 let isDragging = false;
 let imageIntersect: DraggableImage;
+let intersectType: string;
+
+const HEAD_TYPE = "HEAD";
+const BODY_TYPE = "BODY";
+const HEAD_DATA = {
+  x: 250,
+  y: 100,
+  width: 100,
+  height: 100,
+};
+const HAT_COLUMN_X = 75;
+const HAT_COLUMN_Y = 75;
 
 type DraggableImage = {
   image: HTMLImageElement;
@@ -45,7 +57,7 @@ window.onload = () => {
     let hatImage: DraggableImage = {
       image: image,
       x: 75,
-      y: 75 + 100 * i,
+      y: 75 + image.height * i,
       width: image.width,
       height: image.height,
     };
@@ -71,6 +83,7 @@ window.onload = () => {
           e.clientY - rect.top
         )
       ) {
+        intersectType = HEAD_TYPE;
         imageIntersect = hatImages[i];
         break;
       }
@@ -90,6 +103,15 @@ window.onload = () => {
   };
 
   canvas.onmouseup = (e: MouseEvent) => {
+    let rect = canvas.getBoundingClientRect();
+    if (isDragging) {
+      snapItemToBody(
+        imageIntersect,
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+        intersectType
+      );
+    }
     isDragging = false;
     imageIntersect = null;
   };
@@ -126,4 +148,36 @@ const testImageIntersect = (
     return true;
   }
   return false;
+};
+
+const snapItemToBody = (
+  elem: DraggableImage,
+  x: number,
+  y: number,
+  itemType: string
+) => {
+  if (itemType == HEAD_TYPE) {
+    // coordinates of head is fixed on canvas
+    if (
+      x >= HEAD_DATA.x &&
+      x <= HEAD_DATA.x + HEAD_DATA.width &&
+      y >= HEAD_DATA.y &&
+      y <= HEAD_DATA.y + HEAD_DATA.height
+    ) {
+      elem.x = HEAD_DATA.x;
+      elem.y = HEAD_DATA.y;
+
+      // move all other images of same type back to their starting locations
+      for (let i = 0; i < hatImages.length; i++) {
+        if (elem !== hatImages[i]) {
+          hatImages[i].x = HAT_COLUMN_X;
+          hatImages[i].y = HAT_COLUMN_Y + elem.height * i;
+        }
+      }
+    } else {
+      // if the image isn't close enough to the head we can snap it back to its starting location
+      elem.x = HAT_COLUMN_X;
+      elem.y = HAT_COLUMN_Y + elem.height * hatImages.indexOf(elem);
+    }
+  }
 };
